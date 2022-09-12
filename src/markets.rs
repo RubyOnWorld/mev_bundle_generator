@@ -76,6 +76,113 @@ pub trait Market: Send + Sync {
 
     /// Should this return CallData
     fn sell_tokens(
+        
+
+    pub fn snapshot_path<P: AsRef<Path>>(&mut self, path: P) {
+        self.snapshot_path = path.as_ref().to_path_buf();
+    }
+
+    pub fn snapshot_suffix<I: Into<String>>(&mut self, suffix: I) {
+        self.snapshot_suffix = suffix.into();
+    }
+
+    pub fn input_file<P: AsRef<Path>>(&mut self, p: P) {
+        self.input_file = Some(p.as_ref().to_path_buf());
+    }
+
+    pub fn description<S: Into<String>>(&mut self, value: S) {
+        self.description = Some(value.into());
+    }
+
+    #[cfg(feature = "serde")]
+    pub fn info<S: Serialize>(&mut self, s: &S) {
+        let serializer = ContentSerializer::<ValueError>::new();
+        let content = Serialize::serialize(s, serializer).unwrap();
+        self.info = Some(content);
+    }
+
+    pub fn raw_info(&mut self, content: &Content) {
+        self.info = Some(content.to_owned());
+    }
+
+    pub fn omit_expression(&mut self, value: bool) {
+        self.omit_expression = value;
+    }
+
+    pub fn prepend_module_to_snapshot(&mut self, value: bool) {
+        self.prepend_module_to_snapshot = value;
+    }
+
+    #[cfg(feature = "redactions")]
+    pub fn redactions<R: Into<Redactions>>(&mut self, r: R) {
+        self.redactions = r.into();
+    }
+
+    #[cfg(feature = "filters")]
+    pub fn filters<F: Into<Filters>>(&mut self, f: F) {
+        self.filters = f.into();
+    }
+
+    #[cfg(feature = "glob")]
+    pub fn allow_empty_glob(&mut self, value: bool) {
+        self.allow_empty_glob = value;
+    }
+}
+
+/// Configures how insta operates at test time.
+///
+/// Settings are always bound to a thread and some default settings are always
+/// available.  These settings can be changed and influence how insta behaves on
+/// that thread.  They can either temporarily or permanently changed.
+///
+/// This can be used to influence how the snapshot macros operate.
+/// For instance it can be useful to force ordering of maps when
+/// unordered structures are used through settings.
+///
+/// Some of the settings can be changed but shouldn't as it will make it harder
+/// for tools like cargo-insta or an editor integration to locate the snapshot
+/// files.
+///
+/// Settings can also be configured with the [`with_settings!`] macro.
+///
+/// Example:
+///
+/// ```ignore
+/// use insta;
+///
+/// let mut settings = insta::Settings::clone_current();
+/// settings.set_sort_maps(true);
+/// settings.bind(|| {
+///     // runs the assertion with the changed settings enabled
+///     insta::assert_snapshot!(...);
+/// });
+/// ```
+#[derive(Clone)]
+pub struct Settings {
+    inner: Arc<ActualSettings>,
+}
+
+impl Default for Settings {
+    fn default() -> Settings {
+        Settings {
+            inner: DEFAULT_SETTINGS.clone(),
+        }
+    }
+}
+
+impl Settings {
+    /// Returns the default settings.
+    ///
+    /// It's recommended to use `clone_current` instead so that
+    /// already applied modifications are not discarded.
+    pub fn new() -> Settings {
+        Settings::default()
+    }
+
+    /// Returns a copy of the current settings.
+    pub fn clone_current() -> Settings {
+        Settings::with(|x| x.clone())
+    }
         &self,
         token_in: &Address,
         amount_in: &U256,
